@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>駐車場 共有マップ</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --card: #ffffff;
+    --border: #ddd9d0;
+    --text: #2c2c2a;
+    --text-muted: #8a8880;
+    --accent: #d85a30;
+    --accent-bg: #faece7;
+    --empty-bg: #eeecea;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 12px;
+  }
+  h1 { font-size: 17px; font-weight: 600; margin: 0; }
+  .sub { font-size: 12px; color: var(--text-muted); margin: 3px 0 12px; }
+  .header-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
+
+  /* ===== 駐車場グリッド ===== */
+  .lot-wrap {
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    margin-bottom: 20px;
+  }
+  .section {
+    display: flex;
+    flex-direction: row;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+  .section + .section {
+    margin-left: 14px;
+    padding-left: 14px;
+    border-left: 2px dashed var(--border);
+  }
+  .col {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .col-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-align: center;
+    margin-bottom: 2px;
+    letter-spacing: 0.5px;
+  }
+  .slot {
+    width: 68px;
+    min-height: 52px;
+    border-radius: 8px;
+    padding: 6px 6px 5px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    background: var(--empty-bg);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    transition: transform 0.1s;
+  }
+  .slot:active { transform: scale(0.96); }
+  .slot.occupied {
+    background: var(--accent-bg);
+    border-color: #f0997b;
+  }
+  .slot-id {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-muted);
+    margin: 0 0 2px;
+    letter-spacing: 0.3px;
+  }
+  .slot.occupied .slot-id { color: var(--accent); }
+  .slot-name {
+    font-size: 11px;
+    font-weight: 500;
+    margin: 0;
+    line-height: 1.3;
+    word-break: break-all;
+  }
+  .slot-empty {
+    font-size: 11px;
+    color: var(--text-muted);
+    margin: 0;
+  }
+
+  /* ===== 駐車状況リスト ===== */
+  .status-section { border-top: 1px solid var(--border); padding-top: 12px; }
+  .status-title { font-weight: 600; font-size: 14px; margin: 0 0 8px; }
+  .status-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; background: var(--card); margin-bottom: 5px;
+  }
+  .status-row .plate { color: var(--text-muted); font-size: 11px; }
+  .empty-msg { font-size: 13px; color: var(--text-muted); }
+
+  /* ===== ボタン共通 ===== */
+  button {
+    font-family: inherit;
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
+  button:active { transform: scale(0.97); }
+
+  /* ===== モーダル ===== */
+  .modal-overlay {
+    display: none;
+    position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+    align-items: flex-end; justify-content: center; z-index: 10;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-card {
+    background: var(--card); width: 100%; max-width: 480px;
+    border-radius: 16px 16px 0 0; padding: 18px; max-height: 80vh; overflow-y: auto;
+  }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .modal-head h2 { font-size: 16px; margin: 0; font-weight: 600; }
+  .close-btn { border: none; background: none; font-size: 22px; padding: 2px 6px; line-height: 1; color: var(--text-muted); }
+  .veh-btn {
+    width: 100%; text-align: left; margin-bottom: 6px;
+    display: flex; justify-content: space-between; align-items: center; padding: 10px 12px;
+  }
+  .veh-note { display:block; font-size: 11px; color: var(--text-muted); margin-top:2px; }
+  .clear-btn { width: 100%; color: #a32d2d; border-color: #f09595; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <div>
+    <h1>駐車場 共有マップ</h1>
+    <p class="sub" id="summary">読み込み中...</p>
+  </div>
+  <button id="reset-btn">全解除</button>
+</div>
+
+<div class="lot-wrap" id="lot-wrap"></div>
+
+<div class="status-section">
+  <p class="status-title">現在の駐車状況</p>
+  <div id="status-list"></div>
+</div>
+
+<!-- モーダル -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-card">
+    <div class="modal-head">
+      <h2 id="modal-title">車両を選択</h2>
+      <button class="close-btn" id="modal-close">×</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;" id="modal-current"></p>
+    <div id="vehicle-list"></div>
+    <button class="clear-btn" id="clear-slot-btn">この枠を空にする</button>
+  </div>
+</div>
+
+<script>
+  let state = { slots: [], sections: [], vehicles: [], assignments: {} };
+  let activeSlot = null;
+
+  function vehicleById(id) {
+    return state.vehicles.find(v => v.id === id);
+  }
+
+  async function fetchState() {
+    try {
+      const res = await fetch('/api/state');
+      state = await res.json();
+      render();
+    } catch(e) { /* offline */ }
+  }
+
+  async function assign(slot, vehicleId) {
+    const res = await fetch('/api/assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot, vehicle_id: vehicleId })
+    });
+    state = await res.json();
+    render();
+  }
+
+  async function resetAll() {
+    const res = await fetch('/api/reset', { method: 'POST' });
+    state = await res.json();
+    render();
+  }
+
+  function render() {
+    renderLot();
+    renderSummary();
+    renderStatusList();
+  }
+
+  function renderLot() {
+    const wrap = document.getElementById('lot-wrap');
+    wrap.innerHTML = '';
+
+    // セクションが未定義の場合は全列を1セクションとして扱う
+    const sections = state.sections && state.sections.length
+      ? state.sections
+      : [{ cols: [...new Set(state.slots.map(s => s[0]))], rows: 99 }];
+
+    sections.forEach(sec => {
+      const secEl = document.createElement('div');
+      secEl.className = 'section';
+
+      sec.cols.forEach(col => {
+        const colWrap = document.createElement('div');
+        colWrap.className = 'col';
+
+        const label = document.createElement('div');
+        label.className = 'col-label';
+        label.textContent = col;
+        colWrap.appendChild(label);
+
+        for (let row = 1; row <= sec.rows; row++) {
+          const slotId = col + row;
+          if (!state.slots.includes(slotId)) continue;
+
+          const vehicleId = state.assignments[slotId];
+          const v = vehicleId ? vehicleById(vehicleId) : null;
+
+          const cell = document.createElement('div');
+          cell.className = 'slot' + (v ? ' occupied' : '');
+
+          const idEl = document.createElement('p');
+          idEl.className = 'slot-id';
+          idEl.textContent = slotId;
+          cell.appendChild(idEl);
+
+          if (v) {
+            const nameEl = document.createElement('p');
+            nameEl.className = 'slot-name';
+            nameEl.textContent = v.name;
+            cell.appendChild(nameEl);
+          } else {
+            const emptyEl = document.createElement('p');
+            emptyEl.className = 'slot-empty';
+            emptyEl.textContent = '空き';
+            cell.appendChild(emptyEl);
+          }
+
+          cell.addEventListener('click', () => openModal(slotId));
+          colWrap.appendChild(cell);
+        }
+        secEl.appendChild(colWrap);
+      });
+
+      wrap.appendChild(secEl);
+    });
+  }
+
+  function renderSummary() {
+    const occupied = Object.keys(state.assignments).length;
+    const total = state.slots.length;
+    document.getElementById('summary').textContent = `${occupied} / ${total} 台が駐車中`;
+  }
+
+  function renderStatusList() {
+    const list = document.getElementById('status-list');
+    list.innerHTML = '';
+    let any = false;
+    state.slots.forEach(slot => {
+      const id = state.assignments[slot];
+      if (!id) return;
+      any = true;
+      const v = vehicleById(id);
+      const row = document.createElement('div');
+      row.className = 'status-row';
+      row.innerHTML = `<span><strong>${slot}</strong> — ${v ? v.name : id}</span><span class="plate">${v ? v.plate : ''}</span>`;
+      list.appendChild(row);
+    });
+    if (!any) {
+      list.innerHTML = '<p class="empty-msg">現在駐車中の車両はありません。</p>';
+    }
+  }
+
+  function openModal(slot) {
+    activeSlot = slot;
+    document.getElementById('modal-title').textContent = slot + ' の車両を選択';
+    const currentId = state.assignments[slot];
+    const currentV = currentId ? vehicleById(currentId) : null;
+    document.getElementById('modal-current').textContent =
+      currentV ? '現在: ' + currentV.name : '現在: 空き';
+
+    const listEl = document.getElementById('vehicle-list');
+    listEl.innerHTML = '';
+
+    if (state.vehicles.length === 0) {
+      listEl.innerHTML = '<p style="font-size:13px;color:var(--text-muted);">車両が登録されていません。<br>サーバーの server.py 内 DEFAULT_DATA に車両を追加してください。</p>';
+    } else {
+      state.vehicles.forEach(v => {
+        const usedSlot = Object.keys(state.assignments).find(s => state.assignments[s] === v.id);
+        const note = (usedSlot && usedSlot !== slot) ? '現在 ' + usedSlot + ' に駐車中' : v.plate;
+        const btn = document.createElement('button');
+        btn.className = 'veh-btn';
+        btn.innerHTML = `<span>${v.name}<span class="veh-note">${note}</span></span>${currentId === v.id ? '✓' : ''}`;
+        btn.addEventListener('click', () => {
+          assign(slot, v.id);
+          closeModal();
+        });
+        listEl.appendChild(btn);
+      });
+    }
+
+    document.getElementById('modal-overlay').classList.add('open');
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    activeSlot = null;
+  }
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target.id === 'modal-overlay') closeModal();
+  });
+  document.getElementById('clear-slot-btn').addEventListener('click', () => {
+    if (activeSlot) assign(activeSlot, null);
+    closeModal();
+  });
+  document.getElementById('reset-btn').addEventListener('click', () => {
+    if (confirm('すべての枠を空にしますか？')) resetAll();
+  });
+
+  fetchState();
+  setInterval(() => {
+    if (!document.getElementById('modal-overlay').classList.contains('open')) {
+      fetchState();
+    }
+  }, 3000);
+</script>
+</body>
+</html>
