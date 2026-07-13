@@ -180,6 +180,19 @@
       </div>
       <button class="btn-primary" id="add-vehicle-btn">追加する</button>
     </div>
+
+    <div class="add-form">
+      <p>Excelから一括取込</p>
+      <p style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px;">D列：車名　F列：ナンバー のExcelファイルを選択</p>
+      <input type="file" id="excel-input" accept=".xlsx,.xls" style="display:none">
+      <button id="excel-select-btn" style="width:100%;margin-bottom:8px;">📂 Excelファイルを選択</button>
+      <div id="excel-preview" style="display:none;">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 6px;" id="excel-preview-label"></p>
+        <div id="excel-preview-list" style="max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px;background:var(--bg);font-size:12px;margin-bottom:8px;"></div>
+        <button class="btn-primary" id="excel-import-btn">この内容で一括登録する</button>
+      </div>
+    </div>
+
     <p class="section-title">登録済み車両</p>
     <div id="vehicle-manage-list"></div>
   </div>
@@ -198,6 +211,7 @@
   </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
   let state = { slots: [], layout: [], vehicles: [], assignments: {} };
   let activeSlot = null;
@@ -380,6 +394,60 @@
       list.appendChild(item);
     });
   }
+
+  // ===== Excel一括取込 =====
+  let excelVehicles = [];
+
+  document.getElementById('excel-select-btn').addEventListener('click', () => {
+    document.getElementById('excel-input').click();
+  });
+
+  document.getElementById('excel-input').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      try {
+        const wb = XLSX.read(evt.target.result, { type: 'binary' });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+        excelVehicles = [];
+        rows.forEach((row, i) => {
+          const name  = row[3] ? String(row[3]).trim() : ''; // D列
+          const plate = row[5] ? String(row[5]).trim() : ''; // F列
+          if (!name) return;
+          excelVehicles.push({ name, plate });
+        });
+
+        if (excelVehicles.length === 0) {
+          alert('D列に車名が見つかりませんでした。');
+          return;
+        }
+
+        // プレビュー表示
+        const previewList = document.getElementById('excel-preview-list');
+        previewList.innerHTML = excelVehicles.map(v =>
+          `<div style="padding:3px 0;border-bottom:1px solid var(--border);">${v.name}　<span style="color:var(--text-muted)">${v.plate}</span></div>`
+        ).join('');
+        document.getElementById('excel-preview-label').textContent = `${excelVehicles.length}件を読み込みました。確認して登録してください。`;
+        document.getElementById('excel-preview').style.display = 'block';
+      } catch(err) {
+        alert('Excelの読み込みに失敗しました: ' + err.message);
+      }
+    };
+    reader.readAsBinaryString(file);
+    e.target.value = ''; // 同じファイルを再選択できるようにリセット
+  });
+
+  document.getElementById('excel-import-btn').addEventListener('click', async () => {
+    if (excelVehicles.length === 0) return;
+    await apiPost('/api/vehicle/bulk_add', { vehicles: excelVehicles });
+    excelVehicles = [];
+    document.getElementById('excel-preview').style.display = 'none';
+    document.getElementById('excel-preview-list').innerHTML = '';
+    alert(`${excelVehicles.length}件を登録しました。`);
+  });
 
   document.getElementById('add-vehicle-btn').addEventListener('click', async () => {
     const name  = document.getElementById('input-name').value.trim();

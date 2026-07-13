@@ -215,6 +215,23 @@ class Handler(BaseHTTPRequestHandler):
                 save_data(data)
             self._send_json(data)
 
+        elif self.path == "/api/vehicle/bulk_add":
+            vehicles = payload.get("vehicles", [])
+            with LOCK:
+                data = load_data()
+                for item in vehicles:
+                    name  = str(item.get("name",  "")).strip()
+                    plate = str(item.get("plate", "")).strip()
+                    if not name:
+                        continue
+                    data["vehicles"].append({
+                        "id":    "v" + uuid.uuid4().hex[:8],
+                        "name":  name,
+                        "plate": plate,
+                    })
+                save_data(data)
+            self._send_json(data)
+
         elif self.path == "/api/vehicle/delete":
             vehicle_id = payload.get("vehicle_id")
             with LOCK:
