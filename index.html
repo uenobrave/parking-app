@@ -415,7 +415,7 @@
         excelVehicles = [];
         rows.forEach((row, i) => {
           const name  = row[3] ? String(row[3]).trim() : ''; // D列
-          const plate = row[5] ? String(row[5]).trim() : ''; // F列
+          const plate = row[4] ? String(row[4]).trim() : ''; // E列
           if (!name) return;
           excelVehicles.push({ name, plate });
         });
