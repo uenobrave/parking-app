@@ -26,12 +26,10 @@
     padding: 12px;
   }
 
-  /* ヘッダー */
   .header-row { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; }
   h1 { font-size: 17px; font-weight: 600; margin: 0; }
   .sub { font-size: 12px; color: var(--text-muted); margin: 3px 0 0; }
 
-  /* タブ */
   .tabs { display:flex; gap:4px; margin-bottom:14px; border-bottom:1px solid var(--border); }
   .tab {
     font-size:13px; font-weight:500; padding:8px 14px;
@@ -39,30 +37,65 @@
     border-bottom:2px solid transparent; margin-bottom:-1px;
   }
   .tab.active { color:var(--accent); border-bottom-color:var(--accent); }
-
-  /* ページ */
   .page { display:none; }
   .page.active { display:block; }
 
-  /* 駐車場グリッド */
-  .lot-wrap { display:flex; flex-direction:row; gap:0; overflow-x:auto; padding-bottom:4px; margin-bottom:20px; }
-  .section { display:flex; flex-direction:row; gap:4px; flex-shrink:0; }
-  .section + .section { margin-left:14px; padding-left:14px; border-left:2px dashed var(--border); }
-  .col { display:flex; flex-direction:column; gap:4px; }
-  .col-label { font-size:11px; font-weight:600; color:var(--text-muted); text-align:center; margin-bottom:2px; }
-  .slot {
-    width:68px; min-height:52px; border-radius:8px; padding:6px;
-    border:1px solid var(--border); cursor:pointer; background:var(--empty-bg);
-    display:flex; flex-direction:column; justify-content:center; transition:transform 0.1s;
+  /* ===== 駐車場グリッド ===== */
+  /* 横スクロールで全列を表示 */
+  .lot-scroll { overflow-x: auto; padding-bottom: 6px; }
+  .lot-grid {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 4px;
+    width: max-content; /* 内容幅に合わせて広げる */
   }
-  .slot:active { transform:scale(0.96); }
-  .slot.occupied { background:var(--accent-bg); border-color:#f0997b; }
-  .slot-id { font-size:10px; font-weight:700; color:var(--text-muted); margin:0 0 2px; }
-  .slot.occupied .slot-id { color:var(--accent); }
-  .slot-name { font-size:11px; font-weight:500; margin:0; line-height:1.3; word-break:break-all; }
-  .slot-empty { font-size:11px; color:var(--text-muted); margin:0; }
 
-  /* 駐車状況リスト */
+  /* 枠列 */
+  .slot-col { display: flex; flex-direction: column; gap: 4px; }
+  .col-label {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    text-align: center; padding: 2px 0 4px; letter-spacing: 0.5px;
+  }
+  .slot {
+    width: 56px; min-height: 52px;
+    border-radius: 8px; padding: 5px 4px;
+    border: 1px solid var(--border); cursor: pointer;
+    background: var(--empty-bg);
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center; text-align: center;
+    transition: transform 0.1s;
+  }
+  .slot:active { transform: scale(0.95); }
+  .slot.occupied { background: var(--accent-bg); border-color: #f0997b; }
+  .slot-id { font-size: 10px; font-weight: 700; color: var(--text-muted); margin: 0 0 2px; }
+  .slot.occupied .slot-id { color: var(--accent); }
+  .slot-name { font-size: 10px; font-weight: 500; margin: 0; line-height: 1.3; word-break: break-all; }
+  .slot-empty { font-size: 10px; color: var(--text-muted); margin: 0; }
+
+  /* 通路列 */
+  .road-col {
+    display: flex; flex-direction: column; align-items: center;
+    padding-top: 20px; /* col-labelの高さ分 */
+    gap: 0;
+  }
+  .road-bar {
+    width: 22px;
+    background: repeating-linear-gradient(
+      180deg,
+      var(--border) 0px, var(--border) 6px,
+      transparent 6px, transparent 12px
+    );
+    border-radius: 3px;
+  }
+  .road-label {
+    font-size: 10px; font-weight: 600; color: var(--text-muted);
+    writing-mode: vertical-rl; text-orientation: mixed;
+    letter-spacing: 2px; padding: 6px 4px;
+    background: var(--bg); border-radius: 4px;
+  }
+
+  /* 駐車状況 */
   .section-title { font-weight:600; font-size:14px; margin:0 0 8px; }
   .status-row {
     display:flex; justify-content:space-between; align-items:center;
@@ -84,8 +117,6 @@
     border:1px solid var(--danger-border); color:var(--danger);
     background:none; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer; flex-shrink:0;
   }
-
-  /* 車両追加フォーム */
   .add-form {
     background:var(--card); border:1px solid var(--border); border-radius:10px;
     padding:14px; margin-bottom:16px;
@@ -99,7 +130,6 @@
   }
   .field input:focus { outline:none; border-color:var(--accent); }
 
-  /* ボタン共通 */
   button {
     font-family:inherit; font-size:13px; padding:8px 14px;
     border-radius:8px; border:1px solid var(--border);
@@ -140,24 +170,25 @@
   <button id="reset-btn">全解除</button>
 </div>
 
-<!-- タブ -->
 <div class="tabs">
   <button class="tab active" data-tab="map">マップ</button>
   <button class="tab" data-tab="status">駐車状況</button>
   <button class="tab" data-tab="vehicles">車両管理</button>
 </div>
 
-<!-- マップページ -->
+<!-- マップ -->
 <div class="page active" id="page-map">
-  <div class="lot-wrap" id="lot-wrap"></div>
+  <div class="lot-scroll">
+    <div class="lot-grid" id="lot-grid"></div>
+  </div>
 </div>
 
-<!-- 駐車状況ページ -->
+<!-- 駐車状況 -->
 <div class="page" id="page-status">
   <div id="status-list"></div>
 </div>
 
-<!-- 車両管理ページ -->
+<!-- 車両管理 -->
 <div class="page" id="page-vehicles">
   <div class="add-form">
     <p>車両を追加</p>
@@ -171,12 +202,11 @@
     </div>
     <button class="btn-primary btn-block" id="add-vehicle-btn">追加する</button>
   </div>
-
   <p class="section-title">登録済み車両</p>
   <div id="vehicle-manage-list"></div>
 </div>
 
-<!-- 枠タップ時モーダル -->
+<!-- モーダル -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal-card">
     <div class="modal-head">
@@ -190,10 +220,9 @@
 </div>
 
 <script>
-  let state = { slots: [], sections: [], vehicles: [], assignments: {} };
+  let state = { slots: [], layout: [], vehicles: [], assignments: {} };
   let activeSlot = null;
 
-  // ===== API =====
   async function fetchState() {
     try {
       const res = await fetch('/api/state');
@@ -212,7 +241,6 @@
     render();
   }
 
-  // ===== タブ =====
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
@@ -222,46 +250,51 @@
     });
   });
 
-  // ===== 描画 =====
+  function vehicleById(id) {
+    return state.vehicles.find(v => v.id === id);
+  }
+
   function render() {
-    renderLot();
+    renderGrid();
     renderSummary();
     renderStatusList();
     renderVehicleManage();
   }
 
-  function vehicleById(id) {
-    return state.vehicles.find(v => v.id === id);
-  }
+  function renderGrid() {
+    const grid = document.getElementById('lot-grid');
+    grid.innerHTML = '';
 
-  function renderLot() {
-    const wrap = document.getElementById('lot-wrap');
-    wrap.innerHTML = '';
-    const sections = state.sections && state.sections.length
-      ? state.sections
-      : [{ cols: [...new Set(state.slots.map(s => s[0]))], rows: 99 }];
+    const layout = state.layout && state.layout.length ? state.layout : [];
 
-    sections.forEach(sec => {
-      const secEl = document.createElement('div');
-      secEl.className = 'section';
-      sec.cols.forEach(col => {
+    // 最大行数（通路列の高さ計算用）
+    const maxRows = Math.max(...layout.filter(c => c.type === 'col').map(c => c.rows), 1);
+    const slotHeight = 56; // min-height + gap
+    const totalHeight = maxRows * slotHeight;
+
+    layout.forEach(item => {
+      if (item.type === 'col') {
         const colWrap = document.createElement('div');
-        colWrap.className = 'col';
+        colWrap.className = 'slot-col';
+
         const label = document.createElement('div');
         label.className = 'col-label';
-        label.textContent = col;
+        label.textContent = item.col + '列';
         colWrap.appendChild(label);
-        for (let row = 1; row <= sec.rows; row++) {
-          const slotId = col + row;
-          if (!state.slots.includes(slotId)) continue;
+
+        for (let row = 1; row <= item.rows; row++) {
+          const slotId = item.col + row;
           const vehicleId = state.assignments[slotId];
           const v = vehicleId ? vehicleById(vehicleId) : null;
+
           const cell = document.createElement('div');
           cell.className = 'slot' + (v ? ' occupied' : '');
+
           const idEl = document.createElement('p');
           idEl.className = 'slot-id';
           idEl.textContent = slotId;
           cell.appendChild(idEl);
+
           if (v) {
             const nameEl = document.createElement('p');
             nameEl.className = 'slot-name';
@@ -273,12 +306,36 @@
             emptyEl.textContent = '空き';
             cell.appendChild(emptyEl);
           }
+
           cell.addEventListener('click', () => openModal(slotId));
           colWrap.appendChild(cell);
         }
-        secEl.appendChild(colWrap);
-      });
-      wrap.appendChild(secEl);
+        grid.appendChild(colWrap);
+
+      } else if (item.type === 'road') {
+        const roadWrap = document.createElement('div');
+        roadWrap.className = 'road-col';
+
+        const bar = document.createElement('div');
+        bar.className = 'road-bar';
+        bar.style.height = totalHeight + 'px';
+
+        const lbl = document.createElement('div');
+        lbl.className = 'road-label';
+        lbl.textContent = item.label || '通路';
+
+        // バーの中央にラベルを重ねる
+        const wrapper = document.createElement('div');
+        wrapper.style.cssText = 'position:relative; display:flex; align-items:center; justify-content:center;';
+        bar.style.position = 'absolute';
+        bar.style.top = '0'; bar.style.left = '0'; bar.style.width = '100%';
+        wrapper.style.height = totalHeight + 'px';
+        wrapper.style.width = '22px';
+        wrapper.appendChild(bar);
+        wrapper.appendChild(lbl);
+        roadWrap.appendChild(wrapper);
+        grid.appendChild(roadWrap);
+      }
     });
   }
 
@@ -332,7 +389,6 @@
     });
   }
 
-  // ===== 車両追加 =====
   document.getElementById('add-vehicle-btn').addEventListener('click', async () => {
     const name  = document.getElementById('input-name').value.trim();
     const plate = document.getElementById('input-plate').value.trim();
@@ -342,7 +398,6 @@
     document.getElementById('input-plate').value = '';
   });
 
-  // ===== モーダル =====
   function openModal(slot) {
     activeSlot = slot;
     document.getElementById('modal-title').textContent = slot + ' の車両を選択';
@@ -353,7 +408,6 @@
 
     const listEl = document.getElementById('vehicle-list');
     listEl.innerHTML = '';
-
     if (state.vehicles.length === 0) {
       listEl.innerHTML = '<p style="font-size:13px;color:var(--text-muted);">「車両管理」タブから車両を登録してください。</p>';
     } else {
