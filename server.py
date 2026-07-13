@@ -76,12 +76,17 @@ def load_data():
         return {k: v for k, v in DEFAULT_DATA.items()}
     with open(DATA_FILE, "r", encoding="utf-8") as f:
         try:
-            data = json.load(f)
+            saved = json.load(f)
         except Exception:
-            data = {k: v for k, v in DEFAULT_DATA.items()}
-    for key in DEFAULT_DATA:
-        if key not in data:
-            data[key] = DEFAULT_DATA[key]
+            saved = {}
+    # slots/layout は常にコード定義を使う（古いデータが残っても上書き）
+    data = {
+        "slots":       DEFAULT_DATA["slots"],
+        "layout":      DEFAULT_DATA["layout"],
+        "vehicles":    saved.get("vehicles", []),
+        "assignments": {k: v for k, v in saved.get("assignments", {}).items()
+                        if k in DEFAULT_DATA["slots"]},  # 存在しない枠の割当は除去
+    }
     return data
 
 
