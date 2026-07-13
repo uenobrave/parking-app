@@ -13,13 +13,13 @@ import json
 import os
 import socket
 import threading
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 PORT = int(os.environ.get("PORT", 8000))
 DATA_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "parking_data.json")
 LOCK = threading.Lock()
 
-# セクション定義（フロントエンドのレイアウト表示用）
 SECTIONS = [
     {"cols": ["A", "B", "C"], "rows": 9},
     {"cols": ["D", "E"],      "rows": 12},
@@ -28,13 +28,13 @@ SECTIONS = [
 
 def _gen_slots():
     slots = []
-    for col in ["A", "B", "C"]:   # セクション1: 3列×9行
+    for col in ["A", "B", "C"]:
         for row in range(1, 10):
             slots.append(col + str(row))
-    for col in ["D", "E"]:        # セクション2: 2列×12行
+    for col in ["D", "E"]:
         for row in range(1, 13):
             slots.append(col + str(row))
-    for row in range(1, 16):      # セクション3: F列×15行
+    for row in range(1, 16):
         slots.append("F" + str(row))
     return slots
 
@@ -112,6 +112,7 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json({"error": "invalid json"}, 400)
             return
 
+        # 駐車割り当て
         if self.path == "/api/assign":
             slot = payload.get("slot")
             vehicle_id = payload.get("vehicle_id")
@@ -130,10 +131,42 @@ class Handler(BaseHTTPRequestHandler):
                 save_data(data)
             self._send_json(data)
 
+        # 全解除
         elif self.path == "/api/reset":
             with LOCK:
                 data = load_data()
                 data["assignments"] = {}
+                save_data(data)
+            self._send_json(data)
+
+        # 車両追加
+        elif self.path == "/api/vehicle/add":
+            name  = payload.get("name", "").strip()
+            plate = payload.get("plate", "").strip()
+            if not name:
+                self._send_json({"error": "name is required"}, 400)
+                return
+            with LOCK:
+                data = load_data()
+                new_vehicle = {
+                    "id":    "v" + uuid.uuid4().hex[:8],
+                    "name":  name,
+                    "plate": plate,
+                }
+                data["vehicles"].append(new_vehicle)
+                save_data(data)
+            self._send_json(data)
+
+        # 車両削除
+        elif self.path == "/api/vehicle/delete":
+            vehicle_id = payload.get("vehicle_id")
+            with LOCK:
+                data = load_data()
+                data["vehicles"] = [v for v in data["vehicles"] if v["id"] != vehicle_id]
+                # 割り当てからも除去
+                for s in list(data["assignments"].keys()):
+                    if data["assignments"][s] == vehicle_id:
+                        del data["assignments"][s]
                 save_data(data)
             self._send_json(data)
 
