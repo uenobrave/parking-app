@@ -171,19 +171,19 @@
     <div class="add-form">
       <p>車両を追加</p>
       <div class="field">
-        <label>名前（氏名・車種など）</label>
-        <input type="text" id="input-name" placeholder="例: 田中 太郎">
+        <label>名前（車種など）</label>
+        <input type="text" id="input-name" placeholder="例: アルファード">
       </div>
       <div class="field">
         <label>ナンバープレート</label>
-        <input type="text" id="input-plate" placeholder="例: 品川 300 あ 12-34">
+        <input type="text" id="input-plate" placeholder="例: 千葉 3MX わ 80-08">
       </div>
       <button class="btn-primary" id="add-vehicle-btn">追加する</button>
     </div>
 
     <div class="add-form">
       <p>Excelから一括取込</p>
-      <p style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px;">D列：車名　F列：ナンバー のExcelファイルを選択</p>
+      <p style="font-size:12px;color:var(--text-muted);margin:-4px 0 10px;">D列：車名　E列：ナンバー のExcelファイルを選択</p>
       <input type="file" id="excel-input" accept=".xlsx,.xls" style="display:none">
       <button id="excel-select-btn" style="width:100%;margin-bottom:8px;">📂 Excelファイルを選択</button>
       <div id="excel-preview" style="display:none;">
@@ -415,7 +415,7 @@
         excelVehicles = [];
         rows.forEach((row, i) => {
           const name  = row[3] ? String(row[3]).trim() : ''; // D列
-          const plate = row[5] ? String(row[5]).trim() : ''; // F列
+          const plate = row[4] ? String(row[4]).trim() : ''; // E列
           if (!name) return;
           excelVehicles.push({ name, plate });
         });
